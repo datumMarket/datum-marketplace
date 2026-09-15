@@ -1,0 +1,35 @@
+node_modules/
+.env
+*.log
+.DS_Store
+
+# Credentials — never, under any circumstance.
+# NOTE: the on-disk folder is SECRETS/ (uppercase). The old entry here was
+# lowercase `secrets/`, which is invisible on macOS but would NOT match on a
+# case-sensitive filesystem (Linux CI, a clone, a container). Both are listed.
+SECRETS/
+secrets/
+.npmrc
+
+# Deploy tooling: contains the server IP and storage wiring.
+infra/
+scripts/
+
+# Planning documents — thesis, spec, roadmap, runbook, deployment notes.
+# docs/openapi.yaml is the published API spec and IS included; everything else
+# in docs/ is internal.
+docs/*.md
+
+# Data, build output, coverage.
+data/
+server/data/
+data-testnet/
+artifacts/
+cache/
+coverage/
+
+# Wallet material.
+wallets-*.txt
+
+# Package artifacts from local npm pack testing.
+*.tgz

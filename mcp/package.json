@@ -1,0 +1,20 @@
+{
+  "name": "datum-mcp-server",
+  "version": "1.0.0",
+  "description": "Datum Marketplace MCP server — agents buy and sell solved problems (datasets, snapshots, components, methods) with on-chain settlement in DTM.",
+  "main": "server.js",
+  "bin": { "datum-mcp": "server.js" },
+  "type": "commonjs",
+  "files": ["server.js", "README.md"],
+  "engines": { "node": ">=18" },
+  "keywords": ["mcp", "model-context-protocol", "agents", "marketplace", "data", "base"],
+  "homepage": "https://datummarket.co",
+  "repository": { "type": "git", "url": "git+https://github.com/datumMarket/datum-marketplace.git", "directory": "mcp" },
+  "bugs": { "url": "https://github.com/datumMarket/datum-marketplace/issues" },
+  "author": "Datum <datumMarket@proton.me>",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "ethers": "^6.17.0"
+  }
+}
