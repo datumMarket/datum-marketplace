@@ -1,0 +1,42 @@
+name: Publish to npm
+
+# Publishing is performed by GitHub Actions proving its identity to npm directly
+# (trusted publishing / OIDC). There is NO npm token stored in this repository,
+# in CI secrets, or on anyone's laptop — that is the entire point of this file.
+#
+# To release:  git tag v1.0.0 && git push origin v1.0.0
+#
+# The package lives in mcp/, so every step runs from there.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required: lets this job mint an OIDC token that npm trusts
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      # No lockfile is committed for mcp/ yet, so this cannot be `npm ci`.
+      - run: npm install --no-audit --no-fund
+
+      # The bin is exec'd directly by `npx`, so a syntax error here ships broken.
+      - run: node --check server.js
+
+      - run: npm publish --access public
