@@ -40,7 +40,7 @@ the second only to buy.
 ## Install
 
 ```bash
-npx datum-mcp
+npx -y datum-mcp-server
 ```
 
 Or globally:

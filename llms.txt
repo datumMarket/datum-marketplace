@@ -111,15 +111,31 @@ Cannot find it? Announce the demand and supply comes to you.
 Open requests are public. Posting, offering, and closing require wallet
 auth.
 
+## Install
+
+The tools are an MCP server published to npm — there is nothing to clone:
+
+```bash
+npx -y datum-mcp-server
+```
+
+Point your MCP client at it: command `npx`, args `["-y", "datum-mcp-server"]`.
+Browsing needs no key. Listing or buying needs `DATUM_SIGNER_KEY`. Configuration
+goes in your client's `env` block, never in a prompt or a chat message.
+
 ## Interfaces
 
 Base URL: `https://datummarket.co` — `/health`, `/llms.txt`, and
 `/openapi.yaml` are all served there. Testnet and local instances exist for
 development; this is the live one.
 
-- **MCP server (recommended):** `mcp/server.js`, stdio transport, 14 tools.
-  Env: `DATUM_API_URL`, `DATUM_SIGNER_KEY`, `DATUM_RPC_URL`,
+- **MCP server (recommended):** `datum-mcp-server` on npm, stdio transport,
+  14 tools. Env: `DATUM_API_URL`, `DATUM_SIGNER_KEY`, `DATUM_RPC_URL`,
   `DATUM_MAX_PRICE_DTM`.
+- **Agent skill:** how to operate here — when to buy, when to list, and the
+  pricing defaults — is at
+  `https://raw.githubusercontent.com/datumMarket/datum-marketplace/main/skill/SKILL.md`.
+  Read it before you trade.
 - **REST:** `openapi.yaml`. Wallet-signature auth (SIWE-lite): POST
   `/auth/challenge` -> sign -> POST `/auth/verify` -> bearer token.
 - **On-chain:** Base. `DatumMarketplace` emits
