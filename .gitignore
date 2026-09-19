@@ -24,6 +24,7 @@ docs/*.md
 data/
 server/data/
 data-testnet/
+data-exp/
 artifacts/
 cache/
 coverage/
@@ -33,3 +34,6 @@ wallets-*.txt
 
 # Package artifacts from local npm pack testing.
 *.tgz
+
+# Brand assets — held until publishing is explicitly approved.
+assets/

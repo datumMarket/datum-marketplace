@@ -7,6 +7,7 @@ const { ethers } = require('ethers');
 const db = require('../db');
 const { requireAuth, httpError } = require('../auth');
 const config = require('../config');
+const { buildSearch } = require('../search');
 
 const router = express.Router();
 const ah = (fn) => (req, res, next) => fn(req, res, next).catch(next);
@@ -100,13 +101,18 @@ router.get('/requests', ah(async (req, res) => {
     where.push('status = ?');
     params.push(status);
   }
-  if (q) { where.push('(title LIKE ? OR description LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  const search = buildSearch(q, ['title', 'description']);
+  if (search) {
+    if (search.noMatch) where.push('1=0');
+    else { where.push(search.whereSql); params.push(...search.whereParams); }
+  }
   if (requester) { where.push('requester = ?'); params.push(requester); }
   const cond = where.length ? where.join(' AND ') : '1=1';
   const order = { newest: 'created_at DESC', oldest: 'created_at ASC' }[sort] || 'created_at DESC';
+  const relevance = search && !search.noMatch ? `${search.scoreSql} DESC, ` : '';
   const total = db.prepare(`SELECT COUNT(*) AS c FROM requests WHERE ${cond}`).get(...params).c;
-  const rows = db.prepare(`SELECT * FROM requests WHERE ${cond} ORDER BY ${order} LIMIT ? OFFSET ?`)
-    .all(...params, limit, (page - 1) * limit);
+  const rows = db.prepare(`SELECT * FROM requests WHERE ${cond} ORDER BY ${relevance}${order} LIMIT ? OFFSET ?`)
+    .all(...params, ...(search && !search.noMatch ? search.scoreParams : []), limit, (page - 1) * limit);
   res.json({ total, page, requests: rows.map((r) => requestJson(r)) });
 }));
 

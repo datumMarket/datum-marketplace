@@ -68,6 +68,15 @@ async function verifyPurchaseTx(txHash, listing) {
 let indexing = false;
 let lastIndexedBlock = 0;
 
+// Public RPC endpoints cap eth_getLogs at 2,000 blocks. Asking for the whole
+// backlog in a single call fails, the cursor never advances, and the indexer
+// retries the same impossible range on every tick — which is exactly what
+// production did: 13,711 failures over five days without indexing one block.
+const BLOCKS_PER_QUERY = 2000;
+// Drain a large backlog a slice at a time instead of holding one tick open for
+// hundreds of sequential RPC calls.
+const WINDOWS_PER_TICK = 10;
+
 async function indexPurchases() {
   if (!marketReady() || indexing) return;
   indexing = true;
@@ -75,43 +84,49 @@ async function indexPurchases() {
     const latest = await provider.getBlockNumber();
     let from = lastIndexedBlock || config.MARKETPLACE_DEPLOY_BLOCK || latest;
     if (from > latest) return;
-    const logs = await provider.getLogs({
-      address: config.MARKETPLACE_ADDRESS,
-      topics: [PURCHASE_TOPIC],
-      fromBlock: from,
-      toBlock: latest,
-    });
-    for (const log of logs) {
-      try {
-        const parsed = marketIface.parseLog(log);
-        const listing = db
-          .prepare('SELECT * FROM listings WHERE chain_listing_id=? AND seller=?')
-          .get(parsed.args.listingId.toString(), parsed.args.seller.toLowerCase());
-        if (!listing) continue; // purchase for an unknown listing (e.g. router reuse) — skip
-        // Only credit purchases matching the listing price exactly. The
-        // on-chain router is dumb: it emits Purchase for ANY amount, so
-        // without this check a 1-wei purchase would grant download access.
-        if (parsed.args.amount !== BigInt(listing.price_base_units)) continue;
-        db.prepare(
-          `INSERT OR IGNORE INTO purchases
-           (id, listing_id, chain_listing_id, buyer, amount_base_units, fee_base_units, tx_hash, block_number, created_at)
-           VALUES (?,?,?,?,?,?,?,?,?)`
-        ).run(
-          crypto.randomUUID(),
-          listing.id,
-          listing.chain_listing_id,
-          parsed.args.buyer.toLowerCase(),
-          parsed.args.amount.toString(),
-          parsed.args.fee.toString(),
-          log.transactionHash,
-          log.blockNumber,
-          Date.now()
-        );
-      } catch (e) {
-        console.error(`indexer: skipped log ${log.transactionHash}: ${e.message}`);
+    for (let n = 0; n < WINDOWS_PER_TICK && from <= latest; n += 1) {
+      const to = Math.min(from + BLOCKS_PER_QUERY - 1, latest);
+      const logs = await provider.getLogs({
+        address: config.MARKETPLACE_ADDRESS,
+        topics: [PURCHASE_TOPIC],
+        fromBlock: from,
+        toBlock: to,
+      });
+      for (const log of logs) {
+        try {
+          const parsed = marketIface.parseLog(log);
+          const listing = db
+            .prepare('SELECT * FROM listings WHERE chain_listing_id=? AND seller=?')
+            .get(parsed.args.listingId.toString(), parsed.args.seller.toLowerCase());
+          if (!listing) continue; // purchase for an unknown listing (e.g. router reuse) — skip
+          // Only credit purchases matching the listing price exactly. The
+          // on-chain router is dumb: it emits Purchase for ANY amount, so
+          // without this check a 1-wei purchase would grant download access.
+          if (parsed.args.amount !== BigInt(listing.price_base_units)) continue;
+          db.prepare(
+            `INSERT OR IGNORE INTO purchases
+             (id, listing_id, chain_listing_id, buyer, amount_base_units, fee_base_units, tx_hash, block_number, created_at)
+             VALUES (?,?,?,?,?,?,?,?,?)`
+          ).run(
+            crypto.randomUUID(),
+            listing.id,
+            listing.chain_listing_id,
+            parsed.args.buyer.toLowerCase(),
+            parsed.args.amount.toString(),
+            parsed.args.fee.toString(),
+            log.transactionHash,
+            log.blockNumber,
+            Date.now()
+          );
+        } catch (e) {
+          console.error(`indexer: skipped log ${log.transactionHash}: ${e.message}`);
+        }
       }
+      // Advance only after this window has been read cleanly, so a failure can
+      // never move the cursor past blocks that were never indexed.
+      lastIndexedBlock = to + 1;
+      from = to + 1;
     }
-    lastIndexedBlock = latest + 1;
   } catch (e) {
     console.error(`indexer: ${e.message}`);
   } finally {

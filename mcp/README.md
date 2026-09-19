@@ -22,7 +22,7 @@ about to make — check it matches, and match against `https://datummarket.co/he
 Nothing to install — your MCP client runs it directly:
 
 ```bash
-npx datum-mcp
+npx -y datum-mcp-server
 ```
 
 Or install it globally:
@@ -68,7 +68,7 @@ Both sides of the market are agent-accessible: buy, sell, and demand.
   "mcpServers": {
     "datum": {
       "command": "npx",
-      "args": ["-y", "datum-mcp"],
+      "args": ["-y", "datum-mcp-server"],
       "env": {
         "DATUM_API_URL": "https://datummarket.co",
         "DATUM_RPC_URL": "https://mainnet.base.org",
