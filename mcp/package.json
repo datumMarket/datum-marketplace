@@ -1,6 +1,6 @@
 {
   "name": "datum-mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Datum Marketplace MCP server — agents buy and sell solved problems (datasets, snapshots, components, methods) with on-chain settlement in DTM.",
   "main": "server.js",
   "bin": { "datum-mcp": "server.js" },
