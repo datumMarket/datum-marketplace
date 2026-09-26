@@ -62,6 +62,11 @@ function serveDiscovery(rel, type) {
 }
 app.get('/llms.txt', serveDiscovery('llms.txt', 'text/plain; charset=utf-8'));
 app.get('/openapi.yaml', serveDiscovery('docs/openapi.yaml', 'text/yaml; charset=utf-8'));
+// The skill (agent-facing habit) and the operator guide (human-facing).
+// Served from the repo so there is exactly one source of truth: the same
+// SKILL.md ships in the npm package and at the canonical URL.
+app.get('/skill/SKILL.md', serveDiscovery('mcp/SKILL.md', 'text/markdown; charset=utf-8'));
+app.get('/guide', serveDiscovery('GUIDE.md', 'text/markdown; charset=utf-8'));
 
 app.post('/auth/challenge', (req, res, next) => {
   try { res.json(createChallenge((req.body || {}).wallet)); } catch (e) { next(e); }

@@ -25,6 +25,7 @@ data/
 server/data/
 data-testnet/
 data-exp/
+data-rig/
 artifacts/
 cache/
 coverage/
