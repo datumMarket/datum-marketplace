@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS listings (
   description TEXT NOT NULL,
   price_base_units TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
+  content_hash TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -100,5 +101,15 @@ CREATE INDEX IF NOT EXISTS idx_search_log_created ON search_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_search_log_zero ON search_log(zero_result);
 CREATE INDEX IF NOT EXISTS idx_search_log_query ON search_log(query);
 `);
+
+// v1.4.0: idempotent publish. content_hash addresses the exact payload
+// (seller + metadata + file contents); a retry re-sending the same payload
+// returns the already-active listing instead of duplicating it. Fresh DBs got
+// the column from CREATE TABLE above; existing DBs are migrated here.
+const listingCols = db.prepare('PRAGMA table_info(listings)').all().map((c) => c.name);
+if (!listingCols.includes('content_hash')) {
+  db.exec('ALTER TABLE listings ADD COLUMN content_hash TEXT');
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_listings_dedupe ON listings(seller, content_hash)');
 
 module.exports = db;

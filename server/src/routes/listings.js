@@ -52,13 +52,27 @@ router.post('/listings', requireAuth, upload.array('files', config.MAX_FILES), a
   const meta = validateMetadata(req.body || {});
   const id = crypto.randomUUID();
   const files = await ingestFiles(req.files, id);
+  // Idempotent publish (v1.4.0): an exact re-send — same seller, same
+  // metadata, same file contents — returns the already-active listing instead
+  // of duplicating it. A retry after a dropped response used to double-publish.
+  const contentHash = crypto.createHash('sha256').update(JSON.stringify({
+    seller: req.wallet,
+    title: meta.title,
+    description: meta.description,
+    price: meta.priceBaseUnits,
+    files: files.map((f) => f.sha256).sort(),
+  })).digest('hex');
+  const existing = db.prepare("SELECT * FROM listings WHERE seller=? AND content_hash=? AND status='active'").get(req.wallet, contentHash);
+  if (existing) {
+    return res.status(200).json({ ...listingJson(existing), deduplicated: true });
+  }
   await driver.finalizeListing(id, files); // zip-at-publish + (r2) upload, before any DB row
   const now = Date.now();
   const tx = db; // node:sqlite is synchronous; do sequential ops
   const nextId = tx.prepare('SELECT COALESCE(MAX(chain_listing_id), 0) + 1 AS n FROM listings').get().n;
-  tx.prepare(`INSERT INTO listings (id, chain_listing_id, seller, title, description, price_base_units, status, created_at, updated_at)
-              VALUES (?,?,?,?,?,?, 'active', ?, ?)`)
-    .run(id, nextId, req.wallet, meta.title, meta.description, meta.priceBaseUnits, now, now);
+  tx.prepare(`INSERT INTO listings (id, chain_listing_id, seller, title, description, price_base_units, status, content_hash, created_at, updated_at)
+              VALUES (?,?,?,?,?,?, 'active', ?, ?, ?)`)
+    .run(id, nextId, req.wallet, meta.title, meta.description, meta.priceBaseUnits, contentHash, now, now);
   const insFile = tx.prepare('INSERT INTO listing_files (id, listing_id, filename, size, sha256, position) VALUES (?,?,?,?,?,?)');
   for (const f of files) insFile.run(crypto.randomUUID(), id, f.filename, f.size, f.sha256, f.position);
   const row = tx.prepare('SELECT * FROM listings WHERE id=?').get(id);
