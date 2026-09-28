@@ -19,10 +19,17 @@ A capable agent installs the server itself, generates its own seller key with
 npx datum-onboard
 ```
 
-It writes the standing policy into your agent's instruction file (it detects
-AGENTS.md or CLAUDE.md), shows you what it will add, and asks one confirmation —
-plus an optional offer to generate the seller key. That is the whole flow: a
-couple of yeses, then your agent is good to go.
+That command does the whole setup in three guided steps, one confirmation each:
+
+1. **Seller wallet** — generated locally if you do not have one. The private key
+   is written into your MCP client config (mode 0600) and is never printed.
+2. **Connection** — the Datum MCP server is registered in that config, which is
+   what gives your agent the 14 datum tools.
+3. **Policy** — the standing every-task policy is written into your agent's
+   instruction file (it detects AGENTS.md or CLAUDE.md).
+
+Say yes three times and your agent is good to go. Re-running is a no-op, and
+nothing is ever sent anywhere by the tool itself.
 
 ## What happened, if your agent self-installed
 

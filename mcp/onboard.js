@@ -1,34 +1,44 @@
 #!/usr/bin/env node
 'use strict';
 /*
- * datum-onboard — put the Datum every-task policy where your agent reads it.
+ * datum-onboard — set an agent up on Datum in one command.
  *
- * The policy block is what makes an agent search the market before it collects
- * data, and list what it produces (including methods and negative results)
- * after every task. Agents do not reliably discover this on their own: a
- * standing instruction file is the delivery channel that works.
+ * Three guided steps, each one confirmation:
+ *   1. seller wallet   — generated locally; the key goes straight into the MCP
+ *                        client config (0600) and is NEVER printed
+ *   2. connection      — the Datum MCP server registered in that client config,
+ *                        which is what makes the 14 datum tools exist
+ *   3. policy          — the every-task block in the agent's instruction file
  *
- * This tool is intentionally boring and safe:
- *   * it writes exactly one file, chosen by you, with a marker-wrapped block
- *   * it never deletes content, never prints a key, and never touches the
- *     network
- *   * re-running it is a no-op (the block is replaced in place, idempotently)
- *   * it refuses to write policy into credential-looking files
+ * Safety properties, all deliberate:
+ *   * the key never appears in argv, in shell history, in stdout, or in --json
+ *     (that is why this writes the client config directly instead of shelling
+ *     out to `openclaw mcp add` / `claude mcp add`, which take it as an argument)
+ *   * every file is backed up to <file>.datum-bak before its first change and
+ *     then written atomically (temp + rename), mode 0600
+ *   * a config that does not parse, or a target key that is not an object, is a
+ *     hard error — this never guesses and never rewrites what it cannot read
+ *   * re-running is a no-op: the server entry is replaced in place, the policy
+ *     is marker-wrapped, and an existing seller key is reused rather than
+ *     regenerated
+ *   * zero network calls
  *
  * Usage:
- *   npx datum-onboard              # detect, confirm, write
- *   npx datum-onboard --list       # show candidate instruction files
- *   npx datum-onboard --print      # print the block, change nothing
- *   npx datum-onboard --dry-run    # show what would change
- *   npx datum-onboard --yes        # non-interactive (for automation)
- *   npx datum-onboard --target ./CLAUDE.md
+ *   npx datum-onboard                  # detect, then confirm each step
+ *   npx datum-onboard --yes            # non-interactive: accept all steps
+ *   npx datum-onboard --list           # show candidate files for this machine
+ *   npx datum-onboard --print          # print the policy block, change nothing
+ *   npx datum-onboard --dry-run        # show every planned change
+ *   npx datum-onboard --target <file>          # explicit instruction file
+ *   npx datum-onboard --client-config <file>   # explicit MCP client config
+ *   npx datum-onboard --no-connect     # policy only (skip server + wallet)
  */
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
 const { detect } = require('./onboard/detect');
-const { mergePolicy, hasPolicy } = require('./onboard/merge');
+const { mergePolicy } = require('./onboard/merge');
+const mcpClient = require('./onboard/client');
 const pkg = require('./package.json');
 
 const BLOCK_PATH = path.join(__dirname, 'onboard', 'policy-block.md');
@@ -36,7 +46,10 @@ const DEFAULT_CAP = 1000;
 const KEY_FILE_BASENAMES = ['.env', '.env.local', 'id_rsa', 'id_ed25519', 'id_ecdsa'];
 
 function parseArgs(argv) {
-  const a = { yes: false, dryRun: false, list: false, print: false, json: false, help: false, target: null, cap: null };
+  const a = {
+    yes: false, dryRun: false, list: false, print: false, json: false, help: false,
+    target: null, cap: null, clientConfig: null, noConnect: false, noWallet: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const v = argv[i];
     if (v === '--yes' || v === '-y') a.yes = true;
@@ -47,6 +60,9 @@ function parseArgs(argv) {
     else if (v === '--help' || v === '-h') a.help = true;
     else if (v === '--target') a.target = argv[++i];
     else if (v === '--cap') a.cap = argv[++i];
+    else if (v === '--client-config') a.clientConfig = argv[++i];
+    else if (v === '--no-connect') { a.noConnect = true; a.noWallet = true; }
+    else if (v === '--no-wallet') a.noWallet = true;
     else { console.error(`datum-onboard: unknown option "${v}" (try --help)`); process.exit(2); }
   }
   return a;
@@ -59,6 +75,10 @@ function loadBlock(cap) {
     throw new Error(`spend cap must be a whole number of DTM (got "${resolved}")`);
   }
   return raw.replace(/\{\{MAX_PRICE_DTM\}\}/g, resolved);
+}
+
+function capFromBlock(block, fallback) {
+  return /Hard cap: (\d+) DTM/.exec(block)?.[1] || String(fallback || DEFAULT_CAP);
 }
 
 /** Refuse targets that look like credential stores. */
@@ -96,24 +116,50 @@ function chooseTarget(flags, found) {
   return null;
 }
 
+/** Generate a wallet lazily so `ethers` is only loaded when actually needed. */
+function generateWallet() {
+  const { Wallet } = require('ethers');
+  return Wallet.createRandom();
+}
+
+function addressForKey(key) {
+  try {
+    const { Wallet } = require('ethers');
+    return new Wallet(key).address;
+  } catch {
+    return null;
+  }
+}
+
 function help() {
-  console.log(`datum-onboard ${pkg.version} — install the Datum every-task policy for your agent.
+  console.log(`datum-onboard ${pkg.version} — set an agent up on Datum, guided.
 
 Usage: npx datum-onboard [options]
 
-  --list            show candidate instruction files for this machine
+  --list            show candidate instruction files and MCP client configs
   --print           print the policy block and exit (writes nothing)
   --dry-run         show what would change, write nothing
-  --target <file>   write to this file instead of auto-detecting
-  --cap <n>         spend cap written into the policy (default ${DEFAULT_CAP} DTM,
-                    or $DATUM_MAX_PRICE_DTM)
-  --yes, -y         accept defaults, no prompts (for automation)
-  --json            machine-readable summary on stdout
+  --target <file>   instruction file to write the policy into
+                    (default: auto-detected — OpenClaw AGENTS.md, CLAUDE.md, ...)
+  --client-config <file>   MCP client config to register the server in
+  --cap <n>         spend cap written into the policy and the client env
+                    (default ${DEFAULT_CAP} DTM, or $DATUM_MAX_PRICE_DTM)
+  --no-connect      policy only: do not register the server or create a wallet
+  --no-wallet       keep any existing key; do not generate a new one
+  --yes, -y         accept every step, no prompts (for automation)
+  --json            machine-readable summary on stdout (never contains the key)
   -h, --help        this text
 
-The written block is marker-wrapped and replaced in place on re-runs, so your
-other instructions are never disturbed. Existing files are backed up to
-<file>.datum-bak before the first change.`);
+Three steps, each one confirmation:
+  1. seller wallet   the private key is written to your MCP client config (0600)
+                     and is never printed to this terminal
+  2. connection      the Datum MCP server is registered in that config, which is
+                     what gives your agent the datum tools
+  3. policy          the every-task block is written into your agent's
+                     instruction file, marker-wrapped and replaced in place
+
+Every file is backed up to <file>.datum-bak before its first change. Re-running
+is a no-op. Nothing is sent anywhere by this tool.`);
 }
 
 async function main() {
@@ -123,100 +169,152 @@ async function main() {
   const block = loadBlock(flags.cap);
   if (flags.print) { process.stdout.write(block); return; }
 
-  const found = detect();
+  const instructionFiles = detect();
+  const clientConfigs = mcpClient.detect();
+  const cap = capFromBlock(block, flags.cap || process.env.DATUM_MAX_PRICE_DTM);
 
   if (flags.list) {
-    for (const c of found) {
+    console.log('Instruction files (where the policy goes):');
+    for (const c of instructionFiles) {
       const state = c.exists ? (c.isFile ? `${c.size} bytes` : 'not a regular file') : 'missing';
-      console.log(`${c.id.padEnd(12)} ${c.writable ? 'writable' : 'read-only'}  ${state.padEnd(18)} ${c.file}`);
+      console.log(`  ${c.id.padEnd(14)} ${c.writable ? 'writable' : 'read-only'}  ${state.padEnd(18)} ${c.file}`);
+    }
+    console.log('\nMCP client configs (where the server is registered):');
+    for (const c of clientConfigs) {
+      const state = c.exists ? (c.valid ? `${c.bytes} bytes` : `present, ${c.error}`) : 'missing';
+      console.log(`  ${c.id.padEnd(14)} ${c.writable ? 'writable' : 'read-only'}  ${state.padEnd(18)} ${c.file}`);
     }
     return;
   }
 
-  const target = chooseTarget(flags, found);
+  const target = chooseTarget(flags, instructionFiles);
   if (!target) {
     console.error('datum-onboard: no writable instruction file found. Use --target <file>.');
     process.exit(1);
   }
 
-  const existing = fs.existsSync(target.file) ? fs.readFileSync(target.file, 'utf8') : '';
-  const merged = mergePolicy(existing, block);
-
-  if (merged.action === 'error') {
-    console.error(`datum-onboard: ${merged.error} (${target.file})`);
+  const existingText = fs.existsSync(target.file) ? fs.readFileSync(target.file, 'utf8') : '';
+  const policyPlan = mergePolicy(existingText, block);
+  if (policyPlan.action === 'error') {
+    console.error(`datum-onboard: ${policyPlan.error} (${target.file})`);
     process.exit(1);
   }
 
-  const summary = {
-    tool: 'datum-onboard',
-    version: pkg.version,
-    target: target.file,
-    detected: target.why,
-    action: merged.action,
-    cap: /Hard cap: (\d+) DTM/.exec(block)?.[1] || String(DEFAULT_CAP),
-    wrote: false,
-    keyPresent: Boolean(process.env.DATUM_SIGNER_KEY),
-  };
-
-  if (merged.action === 'unchanged') {
-    if (flags.json) console.log(JSON.stringify({ ...summary, alreadyCurrent: true }, null, 2));
-    else console.log(`Already current — ${target.file} carries the current Datum policy. Nothing to do.`);
-    return;
-  }
-
-  if (flags.dryRun) {
-    if (flags.json) console.log(JSON.stringify({ ...summary, dryRun: true }, null, 2));
-    else console.log(`Would ${merged.action === 'added' ? 'add' : 'update'} the Datum policy in:\n  ${target.file}\n(dry run — nothing written)`);
-    return;
-  }
+  // The client is chosen first: a generated key must have somewhere to live, so
+  // we never mint one we cannot store.
+  const chosen = flags.noConnect ? null : mcpClient.pick(clientConfigs, flags.clientConfig);
 
   const interactive = process.stdin.isTTY && process.stdout.isTTY;
-
   if (!flags.yes && !interactive) {
     console.error('datum-onboard: not a TTY and --yes was not given. Re-run with --yes to accept defaults.');
     process.exit(2);
   }
+  const rl = (interactive && !flags.yes)
+    ? require('readline/promises').createInterface({ input: process.stdin, output: process.stdout })
+    : null;
+  const ask = async (q) => (rl ? /^y(es)?$/i.test(String(await rl.question(q)).trim()) : true);
+  const say = (...a) => { if (!flags.json) console.log(...a); };
 
-  let confirm = flags.yes;
-  if (!confirm) {
-    const rl = require('readline/promises').createInterface({ input: process.stdin, output: process.stdout });
-    const verb = merged.action === 'added' ? 'Add' : 'Update';
-    const answer = await rl.question(`${verb} the Datum every-task policy in:\n  ${target.file}\nProceed? [y/N] `);
-    confirm = /^y(es)?$/i.test(answer.trim());
-    if (!confirm) { rl.close(); console.log('Aborted — nothing written.'); return; }
+  const summary = {
+    tool: 'datum-onboard',
+    version: pkg.version,
+    cap,
+    dryRun: Boolean(flags.dryRun),
+    wallet: { reused: false, generated: false, address: null },
+    client: chosen
+      ? { id: chosen.id, label: chosen.label, file: chosen.file, action: 'skipped', wrote: false }
+      : null,
+    policy: { file: target.file, detected: target.why, action: policyPlan.action, wrote: false },
+  };
 
-    if (summary.keyPresent) {
-      console.log('\nSeller key detected (DATUM_SIGNER_KEY) — buying and selling are enabled.');
+  // ---------------------------------------------------------------- step 1/3
+  let key = (process.env.DATUM_SIGNER_KEY || '').trim() || null;
+  if (!key && chosen) key = mcpClient.existingKey(chosen.file, chosen.root, mcpClient.SERVER_NAME);
+
+  if (key) {
+    summary.wallet.reused = true;
+    summary.wallet.address = addressForKey(key);
+    say(`\nStep 1/3 — Seller wallet: reusing the existing key${summary.wallet.address ? ` for ${summary.wallet.address}` : ''}.`);
+  } else if (!flags.noWallet && chosen) {
+    const go = await ask('\nStep 1/3 — Seller wallet.\nGenerate one now? The private key is written straight into your MCP client\nconfig (mode 0600) and is never printed here. Selling needs no gas and no\nfunds. [y/N] ');
+    if (go) {
+      const w = generateWallet();
+      key = w.privateKey;
+      summary.wallet.generated = true;
+      summary.wallet.address = w.address;
+      say(`Generated a seller wallet: ${w.address}\nThe key is NOT printed — step 2 writes it into your client config.`);
     } else {
-      const gen = await rl.question('\nNo seller key found. Generate one now (prints once to this terminal)? [y/N] ');
-      if (/^y(es)?$/i.test(gen.trim())) {
-        rl.close();
-        console.log('\nGenerating seller wallet…\n');
-        const kg = spawnSync(process.execPath, [path.join(__dirname, 'keygen.js')], { stdio: 'inherit' });
-        if (kg.status !== 0) console.error('datum-onboard: keygen failed — run `npx datum-keygen` manually.');
+      say('Skipped. Selling stays off until a key is set — run `npx datum-keygen` when ready.');
+    }
+  } else if (!flags.noWallet && !chosen) {
+    say('\nStep 1/3 — Seller wallet: no writable MCP client config found, so no key was\ncreated. Run `npx datum-keygen` and paste the key into the block shown below.');
+  }
+
+  // ---------------------------------------------------------------- step 2/3
+  if (chosen) {
+    const entry = mcpClient.serverEntry({ key, cap });
+    const plan = mcpClient.planConfig(chosen.file, chosen.root, mcpClient.SERVER_NAME, entry);
+    if (plan.action === 'error') {
+      summary.client.action = 'error';
+      say(`\nStep 2/3 — Connect: not registered — ${plan.error}`);
+    } else {
+      summary.client.action = plan.action;
+      if (plan.action === 'unchanged') {
+        say(`\nStep 2/3 — Connect: ${chosen.label} already has the Datum server registered. Nothing to change.`);
       } else {
-        rl.close();
-        console.log('\nSkipped. Run `npx datum-keygen` when you are ready — selling needs no gas.');
+        const go = await ask(`\nStep 2/3 — Connect to ${chosen.label}.\nRegister the Datum MCP server in:\n  ${chosen.file}\nThis is what gives your agent the datum tools. Proceed? [y/N] `);
+        if (!go) {
+          say('Skipped — the server was not registered.');
+        } else if (flags.dryRun) {
+          say('(dry run — nothing written)');
+        } else {
+          summary.client.wrote = writeFileSafe(chosen.file, plan.content);
+          if (summary.client.wrote) say(`Registered (${plan.action}). Backup: ${chosen.file}.datum-bak`);
+        }
       }
+    }
+  } else if (!flags.noConnect) {
+    say('\nStep 2/3 — Connect: no known MCP client config was found on this machine.\nAdd this to your MCP client config, replacing the key:\n');
+    say(mcpClient.pasteBlock({ cap }));
+    say('\n(Generate that key with `npx datum-keygen`.)');
+  }
+
+  // ---------------------------------------------------------------- step 3/3
+  if (policyPlan.action === 'unchanged') {
+    say(`\nStep 3/3 — Policy: already current in ${target.file}. Nothing to do.`);
+  } else {
+    const verb = policyPlan.action === 'added' ? 'Add' : 'Update';
+    const go = await ask(`\nStep 3/3 — Standing policy.\n${verb} the Datum every-task policy in:\n  ${target.file}\nProceed? [y/N] `);
+    if (!go) {
+      say('Skipped — the policy was not installed.');
+    } else if (flags.dryRun) {
+      say('(dry run — nothing written)');
+    } else {
+      summary.policy.wrote = writeFileSafe(target.file, policyPlan.content);
+      if (summary.policy.wrote) say(`Written. Backup: ${target.file}.datum-bak`);
     }
   }
 
-  const changed = writeFileSafe(target.file, merged.content);
-  summary.wrote = changed;
+  if (rl) rl.close();
 
-  if (flags.json) {
-    console.log(JSON.stringify(summary, null, 2));
-    return;
-  }
+  if (flags.json) { console.log(JSON.stringify(summary, null, 2)); return; }
 
-  console.log(`\n${changed ? (merged.action === 'added' ? 'Added' : 'Updated') : 'Unchanged'}: ${target.file}`);
-  if (changed) console.log(`Backup (first change only): ${target.file}.datum-bak`);
-  console.log('\nYour agent is good to go. The policy loads the next time it starts a session.');
-  console.log('It will search Datum before collecting data, and list what it produces after every task.');
-  if (!summary.keyPresent) {
-    console.log('\nTo enable buying and selling, set DATUM_SIGNER_KEY in your MCP client env block');
-    console.log('(run `npx datum-keygen` if you have not). Keep the key out of chat and out of this file.');
+  const connected = summary.client && (summary.client.wrote || summary.client.action === 'unchanged');
+  say('');
+  if (summary.wallet.generated) {
+    say('Back up your seller key: it lives in the config file above (mode 0600), and');
+    say('whoever holds it controls the DTM your listings earn.');
   }
+  if (connected && summary.policy.wrote) {
+    say('Your agent is good to go. The policy loads the next time it starts a session:');
+    say('it will search Datum before collecting data, and list what it produces after');
+    say('every task — no marketplace wording needed in your prompts.');
+  } else if (connected) {
+    say('Server connected. Run again (or install the policy) to finish the setup.');
+  } else if (summary.policy.wrote) {
+    say('Policy installed. Connect the MCP server (step 2) to enable the datum tools.');
+  }
+  if (flags.dryRun) say('\n(dry run — nothing was written)');
 }
 
 main().catch((err) => {
