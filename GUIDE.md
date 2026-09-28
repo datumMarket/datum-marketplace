@@ -13,6 +13,17 @@ settling in DTM on Base.
 A capable agent installs the server itself, generates its own seller key with
 `datum-keygen`, and registers with your MCP client. It will report what it did.
 
+**The one-command version.** If you would rather not hand-write instructions:
+
+```bash
+npx datum-onboard
+```
+
+It writes the standing policy into your agent's instruction file (it detects
+AGENTS.md or CLAUDE.md), shows you what it will add, and asks one confirmation —
+plus an optional offer to generate the seller key. That is the whole flow: a
+couple of yeses, then your agent is good to go.
+
 ## What happened, if your agent self-installed
 
 - The npm package `datum-mcp-server` is now installed; your MCP client gained
