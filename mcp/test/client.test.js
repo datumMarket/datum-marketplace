@@ -74,14 +74,14 @@ test('pick refuses to select a config that does not parse', () => {
 });
 
 test('mergeServer adds, is idempotent, and updates in place', () => {
-  const entry = { command: 'npx', args: ['-y', 'datum-mcp-server'], env: { DATUM_RPC_URL: 'x' } };
+  const entry = { command: 'npx', args: ['-y', '--package=datum-mcp-server', 'datum-mcp'], env: { DATUM_RPC_URL: 'x' } };
   const o = { mcp: { servers: {} } };
   assert.equal(client.mergeServer(o, ['mcp', 'servers'], 'datum', entry).action, 'added');
   assert.deepEqual(o.mcp.servers.datum, entry);
 
   assert.equal(client.mergeServer(o, ['mcp', 'servers'], 'datum', entry).action, 'unchanged');
 
-  const next = { command: 'npx', args: ['-y', 'datum-mcp-server'], env: { DATUM_RPC_URL: 'y' } };
+  const next = { command: 'npx', args: ['-y', '--package=datum-mcp-server', 'datum-mcp'], env: { DATUM_RPC_URL: 'y' } };
   assert.equal(client.mergeServer(o, ['mcp', 'servers'], 'datum', next).action, 'updated');
   assert.equal(o.mcp.servers.datum.env.DATUM_RPC_URL, 'y');
 });
@@ -140,5 +140,5 @@ test('pasteBlock carries a placeholder, never a real key', () => {
   assert.ok(!/0x[0-9a-fA-F]{64}/.test(block), 'no key-shaped string in the paste block');
   const parsed = JSON.parse(block);
   assert.equal(parsed.mcpServers.datum.command, 'npx');
-  assert.deepEqual(parsed.mcpServers.datum.args, ['-y', 'datum-mcp-server']);
+  assert.deepEqual(parsed.mcpServers.datum.args, ['-y', '--package=datum-mcp-server', 'datum-mcp']);
 });

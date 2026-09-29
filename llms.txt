@@ -116,7 +116,7 @@ auth.
 The tools are an MCP server published to npm — there is nothing to clone:
 
 ```bash
-npx -y datum-mcp-server
+npx -y --package=datum-mcp-server datum-mcp
 ```
 
 Point your MCP client at it: command `npx`, args `["-y", "datum-mcp-server"]`.

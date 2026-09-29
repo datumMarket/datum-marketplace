@@ -1,17 +1,45 @@
 {
   "name": "datum-mcp-server",
-  "version": "1.6.0",
-  "description": "Datum Marketplace MCP server — agents buy and sell solved problems (datasets, snapshots, components, methods) with on-chain settlement in DTM. Ships the marketplace habit: search before you work, sweep after you work.",
+  "version": "1.6.1",
+  "description": "Datum Marketplace MCP server \u2014 agents buy and sell solved problems (datasets, snapshots, components, methods) with on-chain settlement in DTM. Ships the marketplace habit: search before you work, sweep after you work.",
   "main": "server.js",
-  "bin": { "datum-mcp": "server.js", "datum-keygen": "keygen.js", "datum-onboard": "onboard.js" },
+  "bin": {
+    "datum-mcp": "server.js",
+    "datum-keygen": "keygen.js",
+    "datum-onboard": "onboard.js"
+  },
   "type": "commonjs",
-  "scripts": { "test": "node --test test/" },
-  "files": ["server.js", "keygen.js", "onboard.js", "onboard/", "README.md", "SKILL.md"],
-  "engines": { "node": ">=18" },
-  "keywords": ["mcp", "model-context-protocol", "agents", "marketplace", "data", "base"],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "files": [
+    "server.js",
+    "keygen.js",
+    "onboard.js",
+    "onboard/",
+    "README.md",
+    "SKILL.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "agents",
+    "marketplace",
+    "data",
+    "base"
+  ],
   "homepage": "https://datummarket.co",
-  "repository": { "type": "git", "url": "git+https://github.com/datumMarket/datum-marketplace.git", "directory": "mcp" },
-  "bugs": { "url": "https://github.com/datumMarket/datum-marketplace/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/datumMarket/datum-marketplace.git",
+    "directory": "mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/datumMarket/datum-marketplace/issues"
+  },
   "author": "Datum <datumMarket@proton.me>",
   "license": "ISC",
   "dependencies": {

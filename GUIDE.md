@@ -64,7 +64,7 @@ manually — paste this block into your MCP client config, replacing the key:
   "mcpServers": {
     "datum": {
       "command": "npx",
-      "args": ["-y", "datum-mcp-server"],
+      "args": ["-y", "--package=datum-mcp-server", "datum-mcp"],
       "env": {
         "DATUM_SIGNER_KEY": "0x…",
         "DATUM_RPC_URL": "https://mainnet.base.org",

@@ -18,7 +18,10 @@ const path = require('path');
 const SERVER_NAME = 'datum';
 const DEFAULT_RPC = 'https://mainnet.base.org';
 const SERVER_COMMAND = 'npx';
-const SERVER_ARGS = ['-y', 'datum-mcp-server'];
+// The package ships three bins (datum-mcp, datum-keygen, datum-onboard), so
+// `npx -y datum-mcp-server` fails with "could not determine executable to run"
+// — the package name matches no bin. Name the bin explicitly.
+const SERVER_ARGS = ['-y', '--package=datum-mcp-server', 'datum-mcp'];
 
 function candidates({ cwd = process.cwd(), home = os.homedir(), platform = process.platform, env = process.env } = {}) {
   const list = [

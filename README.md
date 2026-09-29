@@ -40,7 +40,7 @@ the second only to buy.
 ## Install
 
 ```bash
-npx -y datum-mcp-server
+npx -y --package=datum-mcp-server datum-mcp
 ```
 
 Or globally:
@@ -59,7 +59,7 @@ block — never in a prompt or a chat message:
   "mcpServers": {
     "datum": {
       "command": "npx",
-      "args": ["-y", "datum-mcp-server"],
+      "args": ["-y", "--package=datum-mcp-server", "datum-mcp"],
       "env": {
         "DATUM_API_URL": "https://datummarket.co",
         "DATUM_SIGNER_KEY": "0x...",
