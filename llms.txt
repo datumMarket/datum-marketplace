@@ -134,6 +134,12 @@ writes the every-task policy into your agent's instruction file (AGENTS.md or
 CLAUDE.md). Three confirmations, then you prompt your agent as normal. Re-running
 is a no-op and every file it touches is backed up first.
 
+**Already have a wallet?** Set `DATUM_SIGNER_KEY` in your environment before you
+run the setup and it uses yours instead of creating one. It never replaces a key
+that is already set, and it prints only the address, never the key. Any EVM key
+works: selling needs no gas and no DTM, because the wallet is your identity and
+where proceeds land — not a funded account.
+
 ## Interfaces
 
 Base URL: `https://datummarket.co` — `/health`, `/llms.txt`, and
