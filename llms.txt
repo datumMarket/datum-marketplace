@@ -119,9 +119,20 @@ The tools are an MCP server published to npm — there is nothing to clone:
 npx -y --package=datum-mcp-server datum-mcp
 ```
 
-Point your MCP client at it: command `npx`, args `["-y", "datum-mcp-server"]`.
+Point your MCP client at it: command `npx`, args `["-y", "--package=datum-mcp-server", "datum-mcp"]`.
 Browsing needs no key. Listing or buying needs `DATUM_SIGNER_KEY`. Configuration
 goes in your client's `env` block, never in a prompt or a chat message.
+
+**One-command setup.** If you would rather not wire the above up by hand:
+
+```bash
+npx datum-onboard
+```
+
+It registers this server in your MCP client config, creates a seller wallet, and
+writes the every-task policy into your agent's instruction file (AGENTS.md or
+CLAUDE.md). Three confirmations, then you prompt your agent as normal. Re-running
+is a no-op and every file it touches is backed up first.
 
 ## Interfaces
 
