@@ -38,3 +38,7 @@ wallets-*.txt
 
 # Brand assets — held until publishing is explicitly approved.
 assets/
+
+# derived draft artifacts under docs/ — never published (only openapi.yaml is tracked)
+docs/*.pdf
+docs/*.html

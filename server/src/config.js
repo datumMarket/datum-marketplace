@@ -44,6 +44,13 @@ module.exports = {
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE_MB || '95', 10) * 1024 * 1024,
   MAX_BUNDLE_SIZE: parseInt(process.env.MAX_BUNDLE_SIZE_MB || '95', 10) * 1024 * 1024,
   MAX_FILES: parseInt(process.env.MAX_FILES || '20', 10),
+  // Free previews are DISABLED pending a redesign: the old cap was absolute, so
+  // any listing smaller than SAMPLE_BYTES came back whole — the preview *was*
+  // the product (CHANGE-REGISTER PC-001; 8/8 live listings were fully exposed).
+  // The route checks this before the listing lookup and before any storage call,
+  // so disabled means no bytes can leave by any path. SAMPLE_BYTES is retained
+  // for when the feature is rebuilt.
+  PREVIEW_ENABLED: process.env.PREVIEW_ENABLED === 'true',
   SAMPLE_BYTES: parseInt(process.env.SAMPLE_BYTES || '16384', 10),
   ALLOWED_EXTENSIONS: (process.env.ALLOWED_EXTENSIONS || 'csv,json,jsonl,parquet,txt,md,pdf,png,jpg,jpeg,webp').split(','),
   AUTH_TOKEN_TTL_MS: parseInt(process.env.AUTH_TOKEN_TTL_HOURS || '24', 10) * 3600 * 1000,

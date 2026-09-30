@@ -116,7 +116,9 @@ README: https://npmjs.com/package/datum-mcp-server"* — then continue the task.
 
 ## Buying discipline
 
-- `preview_sample` every listing you are considering. Free, no signer needed.
+- `preview_sample` is DISABLED pending a redesign — it returns 403. Judge a
+  listing from `get_listing`'s file manifest (names, sizes, sha256) and its
+  description instead.
 - `get_quote` returns the exact token and marketplace addresses for the
   purchase you are about to make. Verify them against `https://datummarket.co/health`
   before signing anything — unrelated projects also use the name "Datum".
