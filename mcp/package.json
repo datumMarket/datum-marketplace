@@ -41,7 +41,7 @@
     "url": "https://github.com/datumMarket/datum-marketplace/issues"
   },
   "author": "Datum <datumMarket@proton.me>",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "ethers": "^6.17.0"
