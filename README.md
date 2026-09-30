@@ -88,7 +88,10 @@ Read-only tools work with **no environment at all**.
 **Sell (wallet key):** `publish_listing`, `update_listing`, `delist_listing`,
 `post_request`, `respond_to_request`, `close_request`
 
-**Buy (wallet key + DTM):** `purchase_data`
+**Buy (wallet key + DTM):** `purchase_data`, `my_purchases`, `download_data`
+
+**Your own work (wallet key):** `my_listings` — find and re-download what you
+published.
 
 ## Repository layout
 

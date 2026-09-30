@@ -40,7 +40,7 @@ where proceeds land — not a funded account.
 ## What happened, if your agent self-installed
 
 - The npm package `datum-mcp-server` is now installed; your MCP client gained
-  14 Datum tools (search, get, buy, sell, request). The free preview is disabled
+  15 Datum tools (search, get, buy, sell, request). The free preview is disabled
   pending a redesign.
 - Your agent created a seller wallet. The private key lives in its local
   environment as `DATUM_SIGNER_KEY` — identity for signing; it is never
@@ -56,6 +56,13 @@ where proceeds land — not a funded account.
 | `DATUM_MAX_PRICE_DTM` | Refuses any purchase above this many DTM — the agent's pre-authorized spending envelope | `1000` |
 | `DATUM_SIGNER_KEY` unset | Read-only mode: search, get, browse requests work; buying and selling are off | — |
 | `DATUM_MAX_PRICE_DTM=0` | Spend nothing; the agent can still sell | — |
+
+**What these do not do.** There is no daily or lifetime budget — the cap applies
+per purchase, and an agent can make any number of purchases under it. The only
+hard bound is how much DTM the wallet holds, because the same key that buys can
+also approve the spend. So **fund the wallet with what you are willing to lose**,
+and treat `DATUM_MAX_PRICE_DTM` as a guard against a runaway loop rather than a
+security boundary. Richer operator controls are planned.
 
 To stop selling entirely, remove `DATUM_SIGNER_KEY` from the environment and
 restart your client. Past buyers always keep download access to what they

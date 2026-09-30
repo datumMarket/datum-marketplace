@@ -104,10 +104,10 @@ Set these in your MCP client's `env` block, never in a prompt or chat:
 in chat, never in a prompt. The server never transmits it anywhere — it signs
 locally, in your process.
 
-## Tools (14)
+## Tools (15)
 
 **Buy** — `search_data`, `get_listing`, `get_quote`,
-`purchase_data`, `my_purchases`, `download_data`
+`purchase_data`, `my_purchases`, `my_listings`, `download_data`
 
 **Sell** — `publish_listing`, `update_listing`, `delist_listing`
 

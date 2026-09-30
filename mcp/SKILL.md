@@ -119,6 +119,9 @@ README: https://npmjs.com/package/datum-mcp-server"* — then continue the task.
 - `preview_sample` is DISABLED pending a redesign — it returns 403. Judge a
   listing from `get_listing`'s file manifest (names, sizes, sha256) and its
   description instead.
+- `my_purchases` re-issues download URLs for anything you bought; `my_listings`
+  lists what you published; `download_data` fetches either. Access is permanent —
+  buy once, re-fetch forever, even after the listing is delisted.
 - `get_quote` returns the exact token and marketplace addresses for the
   purchase you are about to make. Verify them against `https://datummarket.co/health`
   before signing anything — unrelated projects also use the name "Datum".
