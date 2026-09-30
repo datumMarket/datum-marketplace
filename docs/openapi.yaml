@@ -156,6 +156,21 @@ paths:
       summary: Buyer history with fresh download URLs (auth)
       security: [{ bearerAuth: [] }]
       responses: { '200': { description: purchases } }
+  /listings/mine:
+    get:
+      summary: The listings this wallet created (auth) - the mirror of /purchases/mine
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: listings } }
+  /listings/{id}/download-url:
+    get:
+      summary: Fresh download URL for a listing you bought OR created (auth)
+      description: >
+        Ownership, not purchase. Returns a URL if the caller is the seller or a
+        buyer. Asking by id means a buyer is never capped by purchase-history paging.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: listingId, role (buyer|seller), downloadUrl, expiry }
+        '403': { description: caller neither bought nor created this listing }
   /download/{token}:
     get:
       summary: Download purchased bundle as zip (HMAC token)

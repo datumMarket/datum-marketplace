@@ -74,7 +74,7 @@ anyway, you paid more than the price would have been.
 
 Pay once per dataset, in DTM. No subscriptions, no per-call metering.
 Downloads are HMAC-signed URLs valid 60 minutes; re-fetch them anytime from
-purchase history with `my_purchases`.
+purchase history with `my_purchases`; the listings you created with `my_listings`.
 
 ## Selling
 
@@ -148,7 +148,7 @@ Base URL: `https://datummarket.co` — `/health`, `/llms.txt`, and
 development; this is the live one.
 
 - **MCP server (recommended):** `datum-mcp-server` on npm, stdio transport,
-  14 tools. Env: `DATUM_API_URL`, `DATUM_SIGNER_KEY`, `DATUM_RPC_URL`,
+  15 tools. Env: `DATUM_API_URL`, `DATUM_SIGNER_KEY`, `DATUM_RPC_URL`,
   `DATUM_MAX_PRICE_DTM`.
 - **Agent skill:** how to operate here — when to buy, when to list, and the
   pricing defaults — is at

@@ -23,6 +23,25 @@ router.get('/listings/:id/quote', ah(async (req, res) => {
   res.json(chain.quote(listing));
 }));
 
+// A download URL for a listing you bought OR created (auth). Ownership, not
+// purchase, is the rule — see authorize() in routes/download.js. This is the
+// by-id path, so a buyer is never capped by how far back their history pages.
+router.get('/listings/:id/download-url', requireAuth, ah(async (req, res) => {
+  const listing = db.prepare('SELECT * FROM listings WHERE id=?').get(req.params.id);
+  if (!listing) throw httpError(404, 'listing not found');
+  const wallet = String(req.wallet).toLowerCase();
+  const buyers = db.prepare('SELECT buyer FROM purchases WHERE listing_id=?').all(listing.id);
+  const isBuyer = buyers.some((b) => String(b.buyer).toLowerCase() === wallet);
+  const isSeller = String(listing.seller).toLowerCase() === wallet;
+  if (!isBuyer && !isSeller) throw httpError(403, 'you have not purchased this listing and did not create it');
+  res.json({
+    listingId: listing.id,
+    role: isSeller ? 'seller' : 'buyer',
+    downloadUrl: `/download/${tokens.issue(listing.id, wallet)}`,
+    downloadUrlExpiresInMinutes: Math.round(config.DOWNLOAD_URL_TTL_MS / 60000),
+  });
+}));
+
 // Confirm: verify the on-chain Purchase event, record, return download URL
 router.post('/purchases/confirm', ah(async (req, res) => {
   const { listingId, txHash } = req.body || {};
@@ -53,9 +72,19 @@ router.post('/purchases/confirm', ah(async (req, res) => {
 }));
 
 // Buyer's purchase history with fresh download URLs (auth)
+// Buyer's purchase history with fresh download URLs (auth).
 router.get('/purchases/mine', requireAuth, ah(async (req, res) => {
-  const rows = db.prepare('SELECT * FROM purchases WHERE buyer=? ORDER BY created_at DESC LIMIT 100').all(req.wallet);
+  // Paginated: the old hard LIMIT 100 silently hid older purchases, so a buyer
+  // past 100 could not obtain a download URL for them at all. Case-insensitive
+  // on the buyer, because that column comes from a chain event.
+  const limit = Math.min(500, Math.max(1, parseInt(req.query.limit || '100', 10) || 100));
+  const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
+  const total = db.prepare('SELECT COUNT(*) AS c FROM purchases WHERE lower(buyer)=lower(?)').get(req.wallet).c;
+  const rows = db.prepare('SELECT * FROM purchases WHERE lower(buyer)=lower(?) ORDER BY created_at DESC LIMIT ? OFFSET ?').all(req.wallet, limit, offset);
   res.json({
+    total,
+    limit,
+    offset,
     purchases: rows.map((p) => ({
       listingId: p.listing_id,
       amountBaseUnits: p.amount_base_units,

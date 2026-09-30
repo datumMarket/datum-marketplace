@@ -235,16 +235,25 @@ async function myPurchases() {
   return { purchases: data.purchases.map((p) => ({ ...p, downloadUrl: API_URL + p.downloadUrl })) };
 }
 
+async function myListings() {
+  const token = await ensureAuth();
+  const r = await fetch(`${API_URL}/listings/mine`, { headers: { authorization: 'Bearer ' + token } });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(`${r.status} ${data.error || r.statusText}`);
+  return { total: data.total, listings: data.listings };
+}
+
 async function downloadData({ listingId, saveDir }) {
-  let url;
-  try {
-    const mine = await myPurchases();
-    const hit = mine.purchases.find((p) => p.listingId === listingId);
-    if (!hit) throw new Error('not found');
-    url = hit.downloadUrl;
-  } catch {
-    throw new Error(`no purchase found for listing ${listingId} — use purchase_data first`);
+  // Ownership, not purchase: this works for a listing you bought OR one you
+  // created. Asking by id also means a buyer is never capped by how far back
+  // their purchase history pages.
+  const token = await ensureAuth();
+  const u = await fetch(`${API_URL}/listings/${listingId}/download-url`, { headers: { authorization: 'Bearer ' + token } });
+  const info = await u.json().catch(() => ({}));
+  if (!u.ok) {
+    throw new Error(info.error || `no download available for listing ${listingId} — buy it first, or confirm you are the seller`);
   }
+  const url = API_URL + info.downloadUrl;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed: ${r.status}`);
   const dir = saveDir || '.';
@@ -388,8 +397,14 @@ const TOOLS = [
     run: myPurchases,
   },
   {
+    name: 'my_listings',
+    description: 'List the listings this wallet created, newest first. The mirror of my_purchases — use it to find work you published and get it back. Requires DATUM_SIGNER_KEY.',
+    inputSchema: { type: 'object', properties: {} },
+    run: myListings,
+  },
+  {
     name: 'download_data',
-    description: 'Download a purchased listing as a zip bundle to the local filesystem. Use after purchase_data, or anytime you have an existing purchase.',
+    description: 'Download a listing as a zip bundle to the local filesystem. Works for a listing you bought, or one you created. Use after purchase_data, or any time you need a listing you own.',
     inputSchema: {
       type: 'object',
       properties: {

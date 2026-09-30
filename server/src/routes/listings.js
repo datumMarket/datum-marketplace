@@ -116,6 +116,14 @@ router.get('/listings', ah(async (req, res) => {
   res.json({ total, page, listings: rows.map((r) => listingJson(r, { withFiles: false })) });
 }));
 
+// Your own listings (auth) — the mirror of /purchases/mine. Lets a seller find
+// and re-download work it published, instead of searching the public market for
+// its own output. Declared BEFORE /listings/:id so it is not parsed as an id.
+router.get('/listings/mine', requireAuth, ah(async (req, res) => {
+  const rows = db.prepare('SELECT * FROM listings WHERE seller=? ORDER BY created_at DESC').all(req.wallet);
+  res.json({ total: rows.length, listings: rows.map((r) => listingJson(r, { withFiles: false })) });
+}));
+
 function getListingOr404(req) {
   const row = db.prepare('SELECT * FROM listings WHERE id=?').get(req.params.id);
   if (!row) throw httpError(404, 'listing not found');

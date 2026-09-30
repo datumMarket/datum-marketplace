@@ -15,13 +15,21 @@ const router = express.Router();
 const ah = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 const driver = getDriver(); // loud at boot if r2 is misconfigured
 
+// Authorization is about OWNERSHIP, not purchase: you may download a listing if
+// you bought it, or if you created it. Both sides are compared against rows read
+// from the database — never against anything supplied in the request. The token
+// is a bearer credential, so all the security lives in who can mint one, and
+// minting happens behind requireAuth (a wallet signature).
 function authorize(req) {
   const payload = tokens.verify(req.params.token);
   if (!payload) throw httpError(403, 'invalid or expired download token');
-  const purchase = db
-    .prepare('SELECT * FROM purchases WHERE listing_id=? AND buyer=?')
-    .get(payload.listingId, payload.buyer);
-  if (!purchase) throw httpError(403, 'no purchase found for this buyer and listing');
+  const listing = db.prepare('SELECT * FROM listings WHERE id=?').get(payload.listingId);
+  if (!listing) throw httpError(404, 'listing not found');
+  const wallet = String(payload.wallet).toLowerCase();
+  const buyers = db.prepare('SELECT buyer FROM purchases WHERE listing_id=?').all(payload.listingId);
+  const isBuyer = buyers.some((b) => String(b.buyer).toLowerCase() === wallet);
+  const isSeller = String(listing.seller).toLowerCase() === wallet;
+  if (!isBuyer && !isSeller) throw httpError(403, 'no purchase found for this buyer and listing');
   return payload;
 }
 
