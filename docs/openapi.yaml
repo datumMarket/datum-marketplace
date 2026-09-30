@@ -125,8 +125,14 @@ paths:
       responses: { '200': { description: delisted } }
   /listings/{id}/sample:
     get:
-      summary: Free sample (first ~16KB of first file) - public
-      responses: { '200': { description: octet-stream sample } }
+      summary: Free sample - DISABLED pending a redesign; returns 403
+      description: >
+        The free preview is disabled. The old cap was absolute, so any listing
+        smaller than the cap was returned in full. Use GET /listings/{id} for the
+        file manifest (names, sizes, sha256) instead.
+      responses:
+        '403': { description: previews disabled; use GET /listings/{id} for the file manifest }
+        '200': { description: octet-stream sample (only when PREVIEW_ENABLED=true) }
   /listings/{id}/quote:
     get:
       summary: Exact on-chain purchase recipe (public)

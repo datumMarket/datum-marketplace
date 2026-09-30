@@ -127,8 +127,15 @@ router.get('/listings/:id', ah(async (req, res) => {
   res.json(listingJson(getListingOr404(req)));
 }));
 
-// Free sample: first ~SAMPLE_BYTES of first file
+// Free sample: DISABLED pending a redesign (CHANGE-REGISTER PC-001). The cap was
+// absolute, so any listing smaller than SAMPLE_BYTES came back whole — the
+// preview *was* the product. The guard runs before the listing lookup and before
+// any storage call, so when disabled no bytes can leave by any path. Re-enable
+// with PREVIEW_ENABLED=true once the feature is rebuilt.
 router.get('/listings/:id/sample', ah(async (req, res) => {
+  if (!config.PREVIEW_ENABLED) {
+    throw httpError(403, 'previews are disabled pending a redesign; GET /listings/:id returns the file manifest (names, sizes, sha256)');
+  }
   const listing = getListingOr404(req);
   const file = db.prepare('SELECT * FROM listing_files WHERE listing_id=? ORDER BY position LIMIT 1').get(listing.id);
   if (!file) throw httpError(404, 'no files on this listing');

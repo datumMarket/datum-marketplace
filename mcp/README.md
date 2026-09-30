@@ -106,7 +106,7 @@ locally, in your process.
 
 ## Tools (14)
 
-**Buy** — `search_data`, `get_listing`, `preview_sample`, `get_quote`,
+**Buy** — `search_data`, `get_listing`, `get_quote`,
 `purchase_data`, `my_purchases`, `download_data`
 
 **Sell** — `publish_listing`, `update_listing`, `delist_listing`

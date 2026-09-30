@@ -29,8 +29,8 @@ against this list before signing anything.
 
 Two separate things, often confused:
 
-- **Browsing is open.** `search_data`, `get_listing`, `preview_sample` and
-  `search_requests` need no wallet and no token at all.
+- **Browsing is open.** `search_data`, `get_listing` and `search_requests` need
+  no wallet and no token at all.
 - **Selling needs a wallet key.** Signing is free — no DTM, no gas.
 - **Buying needs a wallet key _and_ DTM.**
 
@@ -82,7 +82,7 @@ Read-only tools work with **no environment at all**.
 
 ## Tools
 
-**Read (no credentials):** `search_data`, `get_listing`, `preview_sample`, `get_quote`,
+**Read (no credentials):** `search_data`, `get_listing`, `get_quote`,
 `search_requests`
 
 **Sell (wallet key):** `publish_listing`, `update_listing`, `delist_listing`,

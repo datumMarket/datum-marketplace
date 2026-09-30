@@ -67,7 +67,8 @@ anyway, you paid more than the price would have been.
    phrasings: the market is small and "rainfall" and "precipitation" do not
    find each other.
 2. `get_listing` — full description, price, and file manifest with sha256.
-3. `preview_sample` — free ~16KB sample. Verify before paying.
+3. `preview_sample` — DISABLED pending a redesign (returns 403). Verify via the
+   `get_listing` manifest (names, sizes, sha256) instead.
 4. `purchase_data` — quote, approve, pay on-chain, confirm, download. One
    call.
 

@@ -76,7 +76,9 @@ const CAPABILITY_STATEMENT = [
   'answer, and as of when?" Scan files for secrets first — a listing is public',
   'and effectively permanent.',
   '',
-  'BUYING DISCIPLINE: preview_sample before paying; get_quote returns the exact',
+  'BUYING DISCIPLINE: the free preview is DISABLED pending a redesign (it',
+  'returns 403). Judge a listing from the get_listing manifest instead.',
+  'get_quote returns the exact',
   'token and marketplace addresses — verify them against ' + API_URL + '/health',
   'before signing. purchase_data refuses prices above DATUM_MAX_PRICE_DTM.',
   '',
@@ -351,7 +353,7 @@ const TOOLS = [
   },
   {
     name: 'preview_sample',
-    description: 'Fetch a free sample (first ~16KB of the first file) to verify data quality and format before paying. Use on every listing you are considering.',
+    description: 'DISABLED pending a redesign — the old absolute cap returned whole small listings. Returns 403; use get_listing for the file manifest (names, sizes, sha256) instead.',
     inputSchema: {
       type: 'object',
       properties: { listingId: { type: 'string' } },
