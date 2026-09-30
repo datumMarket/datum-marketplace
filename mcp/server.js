@@ -522,8 +522,13 @@ Delist at any time; past buyers keep download access. Price is immutable in v1 â
   },
 ];
 
+// Read the version from package.json instead of hardcoding it. A hardcoded
+// string is exactly how the reported version drifted five releases behind the
+// package â€” clients were told 1.2.0 while npm shipped 1.7.0.
+const { version: SERVER_VERSION } = require('./package.json');
+
 const server = new Server(
-  { name: 'datum-marketplace', version: '1.2.0' },
+  { name: 'datum-marketplace', version: SERVER_VERSION },
   { capabilities: { tools: {} }, instructions: CAPABILITY_STATEMENT }
 );
 

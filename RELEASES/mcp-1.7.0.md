@@ -6,7 +6,7 @@
 **Does not touch:** `contracts/`, and therefore nothing on-chain. Same token, same
 marketplace, same addresses on Base. This is not a protocol release.
 
-Three changes ship together in this version. Anyone installing from npm gets all three,
+Four changes ship together in this version. Anyone installing from npm gets all four,
 which is why they share one note — the two API-side changes were deployed ahead of the
 package and are unreachable from a client without it.
 
@@ -85,6 +85,24 @@ the comparison are read from the database, never from request input, and `seller
 at creation from the authenticated wallet and is immutable. There is no `?seller=` path.
 The token's subject field was renamed `buyer` → `wallet`; the wire format is positional
 and unchanged, so tokens issued before the rename still verify.
+
+## 4. The version the server reports is now the version it ships
+
+**What was wrong.** `mcp/server.js` hardcoded `version: '1.2.0'` in the MCP `Server`
+constructor, so every client that connected was told **`datum-marketplace 1.2.0`** — five
+releases behind the package it was actually running. It was invisible in the repo and
+obvious the moment the artifact was exercised: the handshake against the installed 1.7.0
+tarball reported `1.2.0`.
+
+**The fix.** The version is read from the package manifest instead of typed by hand:
+
+```js
+const { version: SERVER_VERSION } = require('./package.json');
+```
+
+The reported version and the published version are now the same value by construction, so
+this cannot drift again. Nothing else in the handshake changed: still `datum-marketplace`,
+still 15 tools.
 
 ## Upgrade
 
