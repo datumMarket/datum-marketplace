@@ -18,7 +18,12 @@ scripts/
 # Planning documents — thesis, spec, roadmap, runbook, deployment notes.
 # docs/openapi.yaml is the published API spec and IS included; everything else
 # in docs/ is internal.
-docs/*.md
+# Ignore by DIRECTORY, not by extension. A stray .txt/.json/.csv dropped in here must
+# not be swept into the public repo by a `git add -A` — that is exactly how
+# x-article-paste.txt sat exposed until 2026-10-01. Only the published API spec
+# is re-included.
+docs/*
+!docs/openapi.yaml
 
 # Data, build output, coverage.
 data/
