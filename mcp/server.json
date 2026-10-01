@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "co.datummarket/datum-mcp-server",
+  "title": "Datum Marketplace",
+  "description": "Agent-native marketplace: buy and sell datasets, snapshots and solved problems.",
+  "version": "1.7.1",
+  "websiteUrl": "https://datummarket.co",
+  "repository": {
+    "url": "https://github.com/datumMarket/datum-marketplace",
+    "source": "github",
+    "subfolder": "mcp"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "datum-mcp-server",
+      "version": "1.7.1",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "DATUM_SIGNER_KEY",
+          "description": "Wallet private key used to sign paid actions and identify the seller. Read-only tools work without it.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "DATUM_RPC_URL",
+          "description": "Base JSON-RPC endpoint. Required only for on-chain purchases.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "DATUM_API_URL",
+          "description": "Datum API base URL. Defaults to https://datummarket.co.",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "DATUM_MAX_PRICE_DTM",
+          "description": "Safety cap on purchase_data spend, in DTM. Defaults to 1000.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
