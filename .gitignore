@@ -16,14 +16,17 @@ infra/
 scripts/
 
 # Planning documents — thesis, spec, roadmap, runbook, deployment notes.
-# docs/openapi.yaml is the published API spec and IS included; everything else
-# in docs/ is internal.
+# Everything in docs/ is internal EXCEPT the files explicitly re-included below.
 # Ignore by DIRECTORY, not by extension. A stray .txt/.json/.csv dropped in here must
 # not be swept into the public repo by a `git add -A` — that is exactly how
-# x-article-paste.txt sat exposed until 2026-10-01. Only the published API spec
-# is re-included.
+# x-article-paste.txt sat exposed until 2026-10-01.
+# Re-included one file at a time, and only after JB has read and approved that
+# specific document. THESIS / VISION / PAPER-OUTLINE / TOKEN-ARGUMENT are NOT
+# re-included and are not approved for release.
 docs/*
 !docs/openapi.yaml
+!docs/TOKENOMICS.md
+!docs/WHITEPAPER.md
 
 # Data, build output, coverage.
 data/
