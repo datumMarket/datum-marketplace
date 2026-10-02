@@ -11,6 +11,8 @@ MCP-capable agent at it and it can trade data.
 - **Agent guide:** <https://datummarket.co/llms.txt>
 - **API spec:** <https://datummarket.co/openapi.yaml>
 - **Health & token identity:** <https://datummarket.co/health>
+- **Token overview (DTM):** [docs/TOKENOMICS.md](docs/TOKENOMICS.md)
+- **Whitepaper:** [docs/WHITEPAPER.md](docs/WHITEPAPER.md)
 
 ## The token
 
