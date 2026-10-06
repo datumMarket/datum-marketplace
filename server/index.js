@@ -46,6 +46,8 @@ app.get('/health', (req, res) => {
     storage: require('./src/storage/driver').getDriver().kind,
     llms: '/llms.txt',
     openapi: '/openapi.yaml',
+    tokenomics: '/tokenomics',
+    whitepaper: '/whitepaper',
   });
 });
 
@@ -67,6 +69,10 @@ app.get('/openapi.yaml', serveDiscovery('docs/openapi.yaml', 'text/yaml; charset
 // SKILL.md ships in the npm package and at the canonical URL.
 app.get('/skill/SKILL.md', serveDiscovery('mcp/SKILL.md', 'text/markdown; charset=utf-8'));
 app.get('/guide', serveDiscovery('GUIDE.md', 'text/markdown; charset=utf-8'));
+// Token docs (human-facing). Same source of truth as the GitHub copies:
+// the repo files at docs/, served as markdown.
+app.get('/tokenomics', serveDiscovery('docs/TOKENOMICS.md', 'text/markdown; charset=utf-8'));
+app.get('/whitepaper', serveDiscovery('docs/WHITEPAPER.md', 'text/markdown; charset=utf-8'));
 
 app.post('/auth/challenge', (req, res, next) => {
   try { res.json(createChallenge((req.body || {}).wallet)); } catch (e) { next(e); }
