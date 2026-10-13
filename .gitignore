@@ -50,3 +50,7 @@ assets/
 # derived draft artifacts under docs/ — never published (only openapi.yaml is tracked)
 docs/*.pdf
 docs/*.html
+
+# internal only — never public (2026-10-13)
+VISION-IP.md
+EXPERIMENTS/
